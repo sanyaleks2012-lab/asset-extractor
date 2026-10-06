@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       asset_url:
-        description: 'Direct URL to download bin/bundle'
+        description: 'Direct URL to download zip archive'
         required: true
         type: string
       tag_name:
-        description: 'Release Tag (e.g. v1.0.0)'
+        description: 'New Release Tag (e.g. v1.0.1)'
         required: true
-        default: 'v1.0.0'
+        default: 'v1.0.1'
 
 jobs:
   extract:
@@ -33,20 +33,24 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Download input binary
+      - name: Download and Unpack Input Archive
         run: |
           mkdir -p bin
-          curl -L "${{ inputs.asset_url }}" -o bin/data.bin
+          curl -L "${{ inputs.asset_url }}" -o archive.zip
+          unzip -o archive.zip -d bin/
+          rm archive.zip
 
       - name: Run extraction script
         run: |
           python v.py bin bin_out
 
-      - name: Compress assets (Split if > 2GB)
+      - name: Compress assets (Split if > 1.9GB)
         run: |
           zip -r -9 extracted_assets.zip bin_out
-          # Разбиваем на части по 1900MB, если размер превышает 2GB
-          split -b 1900m extracted_assets.zip extracted_assets.zip.part_ || true
+          if [ $(stat -c%s "extracted_assets.zip") -gt 2000000000 ]; then
+            split -b 1900m extracted_assets.zip extracted_assets.zip.part_
+            rm extracted_assets.zip
+          fi
 
       - name: Create Release and Upload Assets
         run: |
