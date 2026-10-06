@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       tag_name:
-        description: 'New Release Tag (e.g. v1.0.1)'
+        description: 'Release Tag (e.g. v1.0.1)'
         required: true
         default: 'v1.0.1'
 
@@ -54,14 +54,16 @@ jobs:
 
       - name: Create Release and Upload Assets
         run: |
+          # Создаем релиз, если его нет (игнорируем ошибку, если тег существует)
           gh release create "${{ inputs.tag_name }}" \
             --title "Release ${{ inputs.tag_name }}" \
-            --notes "Automated asset extraction"
+            --notes "Automated asset extraction" || true
 
+          # Загружаем файлы с флагом --clobber (перезапись файлов при совпадении)
           if ls extracted_assets.zip.part_* 1> /dev/null 2>&1; then
-            gh release upload "${{ inputs.tag_name }}" extracted_assets.zip.part_*
+            gh release upload "${{ inputs.tag_name }}" extracted_assets.zip.part_* --clobber
           else
-            gh release upload "${{ inputs.tag_name }}" extracted_assets.zip
+            gh release upload "${{ inputs.tag_name }}" extracted_assets.zip --clobber
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
