@@ -312,16 +312,31 @@ if __name__ == "__main__":
 
     os.makedirs(dst_path, exist_ok=True)
 
-    print(f"Extracting assets from: {src_path}")
+    # Собираем список файлов для обработки
+    files_to_process = []
+    if src_path.is_file():
+        files_to_process.append(src_path)
+    else:
+        for root, _, files in os.walk(src_path):
+            for file in files:
+                files_to_process.append(Path(root) / file)
+
+    print(f"Found {len(files_to_process)} files to process in: {src_path}")
     print(f"Destination directory: {dst_path}")
 
-    exported_items = extract_assets(
-        src=str(src_path),
-        dst=dst_path,
-        use_container=args.use_container,
-        append_path_id=args.append_path_id,
-        export_unknown_as_typetree=args.export_unknown_as_typetree,
-    )
+    total_exported = 0
+    for file_path in files_to_process:
+        try:
+            exported_items = extract_assets(
+                src=str(file_path),
+                dst=dst_path,
+                use_container=args.use_container,
+                append_path_id=args.append_path_id,
+                export_unknown_as_typetree=args.export_unknown_as_typetree,
+            )
+            total_exported += len(exported_items)
+        except Exception as e:
+            # Игнорируем файлы, которые не являются Unity-бандлами
+            print(f"Skipping {file_path.name}: {e}")
 
-    print(f"Done! Successfully exported {len(exported_items)} items.")
-    
+    print(f"Done! Successfully exported {total_exported} items in total.")
